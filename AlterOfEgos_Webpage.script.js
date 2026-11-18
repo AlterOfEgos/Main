@@ -12,6 +12,8 @@ const PREFERENCES_KEY = "alterofegos-weather-preferences";
 const EMAILJS_URL = "https://cdn.emailjs.com/dist/email.min.js";
 let emailJsLoadPromise = null;
 let emailJsInitialized = false;
+const geocodingCache = utils.createRequestCache();
+const forecastCache = utils.createRequestCache();
 
 function loadEmailJs() {
     if (window.emailjs) {
@@ -122,7 +124,8 @@ async function searchCity(city) {
     locationChoices.hidden = true;
     setWeatherStatus(`Searching for ${city}…`);
     try {
-        const result = await getJson(utils.buildGeocodingUrl(city));
+        const geocodingUrl = utils.buildGeocodingUrl(city);
+        const result = await geocodingCache.get(geocodingUrl, () => getJson(geocodingUrl));
         const locations = utils.normalizeLocations(result.results);
         if (locations.length === 0) {
             throw new Error(`No location found for “${city}”. Check the spelling and try again.`);
@@ -147,7 +150,9 @@ async function loadWeather(location, alreadyBusy = false, rememberLocation = tru
 
     try {
         const unit = temperatureUnit.value;
-        const data = await getJson(utils.buildForecastUrl(location, unit));
+        const forecastUrl = utils.buildForecastUrl(location, unit);
+        const cacheKey = `${forecastUrl}:${unit}`;
+        const data = await forecastCache.get(cacheKey, () => getJson(forecastUrl));
         renderWeather(location, data, unit);
         selectedLocation = location;
         weatherResults.hidden = false;

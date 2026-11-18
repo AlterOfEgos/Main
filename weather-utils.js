@@ -111,5 +111,25 @@
         }
     }
 
-    return { getConditions, formatTemperature, buildGeocodingUrl, normalizeLocations, buildForecastUrl, requestJson };
+    function createRequestCache(ttlMs = 300000) {
+        const entries = new Map();
+
+        return {
+            get(key, loader) {
+                const now = Date.now();
+                const existing = entries.get(key);
+                if (existing && existing.expiresAt > now) return existing.value;
+                if (existing) entries.delete(key);
+
+                const value = Promise.resolve().then(loader).catch((error) => {
+                    entries.delete(key);
+                    throw error;
+                });
+                entries.set(key, { value, expiresAt: now + ttlMs });
+                return value;
+            }
+        };
+    }
+
+    return { getConditions, formatTemperature, buildGeocodingUrl, normalizeLocations, buildForecastUrl, requestJson, createRequestCache };
 });

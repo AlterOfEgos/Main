@@ -95,3 +95,20 @@ test("requestJson times out stalled weather requests", async () => {
         /request timed out/
     );
 });
+
+test("request cache reuses in-flight and recent successful requests", async () => {
+    const cache = weather.createRequestCache(1000);
+    let calls = 0;
+    const loader = async () => {
+        calls += 1;
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        return { ok: true };
+    };
+
+    const first = cache.get("forecast:Paris", loader);
+    const second = cache.get("forecast:Paris", loader);
+    assert.equal(await first, await second);
+    assert.equal(calls, 1);
+    await cache.get("forecast:Paris", loader);
+    assert.equal(calls, 1);
+});
