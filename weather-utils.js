@@ -111,5 +111,28 @@
         }
     }
 
-    return { getConditions, formatTemperature, buildGeocodingUrl, normalizeLocations, buildForecastUrl, requestJson };
+    function createRequestCache(ttlMs = 10 * 60 * 1000) {
+        const entries = new Map();
+
+        function getOrLoad(key, loader) {
+            const now = Date.now();
+            const existing = entries.get(key);
+            if (existing && existing.expiresAt > now) return existing.promise;
+            if (existing) entries.delete(key);
+
+            const promise = Promise.resolve().then(loader);
+            entries.set(key, {
+                expiresAt: now + ttlMs,
+                promise
+            });
+            promise.catch(() => {
+                if (entries.get(key)?.promise === promise) entries.delete(key);
+            });
+            return promise;
+        }
+
+        return { getOrLoad };
+    }
+
+    return { getConditions, formatTemperature, buildGeocodingUrl, normalizeLocations, buildForecastUrl, requestJson, createRequestCache };
 });
