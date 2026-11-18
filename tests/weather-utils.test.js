@@ -63,6 +63,32 @@ test("forecast URL rejects invalid locations", () => {
     assert.throws(() => weather.buildForecastUrl({ latitude: 91, longitude: 0 }, "celsius"), /valid location/);
 });
 
+test("forecast data rejects incomplete service responses", () => {
+    assert.throws(
+        () => weather.validateForecastData({ current: {}, daily: {} }),
+        /incomplete forecast/
+    );
+});
+
+test("forecast data accepts complete current and daily values", () => {
+    const payload = {
+        current: {
+            temperature_2m: 18,
+            apparent_temperature: 17,
+            relative_humidity_2m: 62,
+            wind_speed_10m: 12,
+            weather_code: 2
+        },
+        daily: {
+            time: ["2026-11-18"],
+            weather_code: [2],
+            temperature_2m_max: [20],
+            temperature_2m_min: [14]
+        }
+    };
+    assert.equal(weather.validateForecastData(payload), payload);
+});
+
 test("requestJson returns parsed JSON for a successful response", async () => {
     const payload = { results: [{ name: "Paris" }] };
     const fetchStub = async () => ({ ok: true, json: async () => payload });
