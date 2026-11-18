@@ -95,3 +95,30 @@ test("requestJson times out stalled weather requests", async () => {
         /request timed out/
     );
 });
+
+test("request cache reuses values and deduplicates in-flight loads", async () => {
+    let loads = 0;
+    const cache = weather.createRequestCache();
+    const loader = async () => {
+        loads += 1;
+        return "cached";
+    };
+
+    const first = cache.getOrLoad("forecast", loader);
+    const second = cache.getOrLoad("forecast", loader);
+    assert.equal(await first, "cached");
+    assert.equal(await second, "cached");
+    assert.equal(loads, 1);
+});
+
+test("request cache expires entries after the configured TTL", async () => {
+    let loads = 0;
+    const cache = weather.createRequestCache(-1);
+    const loader = async () => {
+        loads += 1;
+        return loads;
+    };
+
+    assert.equal(await cache.getOrLoad("forecast", loader), 1);
+    assert.equal(await cache.getOrLoad("forecast", loader), 2);
+});
