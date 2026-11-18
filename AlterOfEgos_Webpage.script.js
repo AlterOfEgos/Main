@@ -5,10 +5,46 @@ const weatherResults = document.getElementById("weather-results");
 const forecastList = document.getElementById("forecast-list");
 const temperatureUnit = document.getElementById("temperature-unit");
 const locationChoices = document.getElementById("location-choices");
+const cityInput = document.getElementById("weather-city");
 const searchButton = weatherSearch.querySelector('button[type="submit"]');
 const locationButton = document.getElementById("use-location");
+const PREFERENCES_KEY = "alterofegos-weather-preferences";
+
+function readPreferences() {
+    try {
+        const preferences = JSON.parse(window.localStorage.getItem(PREFERENCES_KEY) || "{}");
+        const location = preferences.location;
+        const validLocation = location && Number.isFinite(location.latitude) &&
+            Number.isFinite(location.longitude) && typeof location.label === "string";
+
+        return {
+            unit: preferences.unit === "fahrenheit" ? "fahrenheit" : "celsius",
+            location: validLocation ? location : null
+        };
+    } catch (error) {
+        // Storage may be unavailable or contain invalid JSON; use the defaults.
+        return { unit: "celsius", location: null };
+    }
+}
+
+const savedPreferences = readPreferences();
+temperatureUnit.value = savedPreferences.unit;
+let savedLocation = savedPreferences.location;
 let selectedLocation = null;
 let isBusy = false;
+
+if (savedLocation) cityInput.value = savedLocation.label;
+
+function savePreferences() {
+    try {
+        window.localStorage.setItem(PREFERENCES_KEY, JSON.stringify({
+            unit: temperatureUnit.value,
+            location: savedLocation
+        }));
+    } catch (error) {
+        // Weather still works if browser storage is disabled or full.
+    }
+}
 
 function setWeatherStatus(message, isError = false) {
     weatherStatus.textContent = message;
@@ -69,7 +105,7 @@ async function searchCity(city) {
     }
 }
 
-async function loadWeather(location, alreadyBusy = false) {
+async function loadWeather(location, alreadyBusy = false, rememberLocation = true) {
     if (isBusy && !alreadyBusy) return;
     setBusy(true);
     locationChoices.hidden = true;
@@ -81,6 +117,11 @@ async function loadWeather(location, alreadyBusy = false) {
         renderWeather(location, data, unit);
         selectedLocation = location;
         weatherResults.hidden = false;
+        if (rememberLocation) {
+            savedLocation = location;
+            cityInput.value = location.label;
+            savePreferences();
+        }
         setWeatherStatus(`Forecast loaded for ${location.label}.`);
     } catch (error) {
         // Keep the last successful forecast visible if a refresh fails.
@@ -128,11 +169,12 @@ function renderWeather(location, data, unit) {
 weatherSearch.addEventListener("submit", (event) => {
     event.preventDefault();
     if (isBusy) return;
-    const city = document.getElementById("weather-city").value.trim();
+    const city = cityInput.value.trim();
     if (city) searchCity(city);
 });
 
 temperatureUnit.addEventListener("change", () => {
+    savePreferences();
     if (selectedLocation && !isBusy) loadWeather(selectedLocation);
 });
 
@@ -150,7 +192,7 @@ locationButton.addEventListener("click", () => {
             latitude: coords.latitude,
             longitude: coords.longitude,
             label: "Your location"
-        }, true),
+        }, true, false),
         (error) => {
             const message = error.code === error.PERMISSION_DENIED
                 ? "Location permission was denied. Search for a city instead."
@@ -190,3 +232,6 @@ if (contactForm) {
 
     if (window.emailjs) window.emailjs.init("lz1RP-zscAZDnEhq1");
 }
+
+// Restore the last searched city automatically; device coordinates are never saved.
+if (savedLocation) loadWeather(savedLocation);
