@@ -111,5 +111,39 @@
         }
     }
 
-    return { getConditions, formatTemperature, buildGeocodingUrl, normalizeLocations, buildForecastUrl, requestJson };
+    function buildForecastCacheKey(location, unit) {
+        const temperatureUnit = unit === "fahrenheit" ? "fahrenheit" : "celsius";
+        return `alterofegos-forecast:${location.latitude.toFixed(3)},${location.longitude.toFixed(3)}:${temperatureUnit}`;
+    }
+
+    function readForecastCache(storage, location, unit, now = Date.now(), ttlMs = 10 * 60 * 1000) {
+        try {
+            const entry = JSON.parse(storage.getItem(buildForecastCacheKey(location, unit)));
+            if (!entry || !Number.isFinite(entry.timestamp) || !entry.data) return null;
+            if (now - entry.timestamp >= ttlMs) return null;
+            return entry.data;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function writeForecastCache(storage, location, unit, data, now = Date.now()) {
+        try {
+            storage.setItem(buildForecastCacheKey(location, unit), JSON.stringify({ timestamp: now, data }));
+        } catch (error) {
+            // Forecast caching is optional when browser storage is unavailable or full.
+        }
+    }
+
+    return {
+        getConditions,
+        formatTemperature,
+        buildGeocodingUrl,
+        normalizeLocations,
+        buildForecastUrl,
+        requestJson,
+        buildForecastCacheKey,
+        readForecastCache,
+        writeForecastCache
+    };
 });
