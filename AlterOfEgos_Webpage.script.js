@@ -12,6 +12,7 @@ const PREFERENCES_KEY = "alterofegos-weather-preferences";
 const EMAILJS_URL = "https://cdn.emailjs.com/dist/email.min.js";
 let emailJsLoadPromise = null;
 let emailJsInitialized = false;
+const weatherJsonCache = utils.createJsonCache(window.fetch.bind(window));
 
 function loadEmailJs() {
     if (window.emailjs) {
@@ -95,7 +96,7 @@ function setBusy(busy) {
 }
 
 async function getJson(url) {
-    return utils.requestJson(window.fetch.bind(window), url, undefined, 15000);
+    return weatherJsonCache.request(url, undefined, 15000);
 }
 
 function showLocationChoices(locations) {

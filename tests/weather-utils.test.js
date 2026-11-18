@@ -95,3 +95,37 @@ test("requestJson times out stalled weather requests", async () => {
         /request timed out/
     );
 });
+
+test("createJsonCache reuses successful responses within the TTL", async () => {
+    let fetchCount = 0;
+    const fetchStub = async () => {
+        fetchCount += 1;
+        return { ok: true, json: async () => ({ fetchCount }) };
+    };
+    const cache = weather.createJsonCache(fetchStub, 60000);
+
+    const first = await cache.request("https://example.test/forecast");
+    const second = await cache.request("https://example.test/forecast");
+
+    assert.deepEqual(first, { fetchCount: 1 });
+    assert.deepEqual(second, { fetchCount: 1 });
+    assert.equal(fetchCount, 1);
+});
+
+test("createJsonCache coalesces simultaneous requests", async () => {
+    let fetchCount = 0;
+    const fetchStub = async () => {
+        fetchCount += 1;
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        return { ok: true, json: async () => ({ ok: true }) };
+    };
+    const cache = weather.createJsonCache(fetchStub);
+
+    const [first, second] = await Promise.all([
+        cache.request("https://example.test/geocoding"),
+        cache.request("https://example.test/geocoding")
+    ]);
+
+    assert.deepEqual(first, second);
+    assert.equal(fetchCount, 1);
+});
