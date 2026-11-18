@@ -12,6 +12,8 @@ const PREFERENCES_KEY = "alterofegos-weather-preferences";
 const EMAILJS_URL = "https://cdn.emailjs.com/dist/email.min.js";
 let emailJsLoadPromise = null;
 let emailJsInitialized = false;
+const weatherRequest = utils.createJsonRequestCache(window.fetch.bind(window), 300000);
+const weekdayFormatter = new Intl.DateTimeFormat(undefined, { weekday: "short" });
 
 function loadEmailJs() {
     if (window.emailjs) {
@@ -95,7 +97,7 @@ function setBusy(busy) {
 }
 
 async function getJson(url) {
-    return utils.requestJson(window.fetch.bind(window), url, undefined, 15000);
+    return weatherRequest(url, undefined, 15000);
 }
 
 function showLocationChoices(locations) {
@@ -184,7 +186,7 @@ function renderWeather(location, data, unit) {
         day.setAttribute("role", "listitem");
 
         const heading = document.createElement("h4");
-        heading.textContent = new Intl.DateTimeFormat(undefined, { weekday: "short" }).format(new Date(`${date}T12:00:00`));
+        heading.textContent = weekdayFormatter.format(new Date(`${date}T12:00:00`));
         const iconElement = document.createElement("span");
         iconElement.className = "forecast-icon";
         iconElement.setAttribute("aria-hidden", "true");
