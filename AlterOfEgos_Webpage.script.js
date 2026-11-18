@@ -147,7 +147,9 @@ async function loadWeather(location, alreadyBusy = false, rememberLocation = tru
 
     try {
         const unit = temperatureUnit.value;
-        const data = await getJson(utils.buildForecastUrl(location, unit));
+        const cachedData = utils.readForecastCache(window.localStorage, location, unit);
+        const data = cachedData || await getJson(utils.buildForecastUrl(location, unit));
+        if (!cachedData) utils.writeForecastCache(window.localStorage, location, unit, data);
         renderWeather(location, data, unit);
         selectedLocation = location;
         weatherResults.hidden = false;

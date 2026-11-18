@@ -95,3 +95,29 @@ test("requestJson times out stalled weather requests", async () => {
         /request timed out/
     );
 });
+
+test("forecast cache reuses fresh data and ignores expired entries", () => {
+    const entries = new Map();
+    const storage = {
+        getItem(key) { return entries.get(key) ?? null; },
+        setItem(key, value) { entries.set(key, value); }
+    };
+    const location = { latitude: 40.712, longitude: -74.006, label: "New York" };
+    const data = { current: { temperature_2m: 21 } };
+
+    weather.writeForecastCache(storage, location, "celsius", data, 1000);
+    assert.deepEqual(weather.readForecastCache(storage, location, "celsius", 599999, 600000), data);
+    assert.equal(weather.readForecastCache(storage, location, "celsius", 601000, 600000), null);
+});
+
+test("forecast cache keys isolate units and nearby locations", () => {
+    const location = { latitude: 40.7123, longitude: -74.0067, label: "New York" };
+    assert.equal(
+        weather.buildForecastCacheKey(location, "celsius"),
+        "alterofegos-forecast:40.712,-74.007:celsius"
+    );
+    assert.notEqual(
+        weather.buildForecastCacheKey(location, "celsius"),
+        weather.buildForecastCacheKey(location, "fahrenheit")
+    );
+});
