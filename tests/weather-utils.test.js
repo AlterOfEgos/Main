@@ -95,3 +95,32 @@ test("requestJson times out stalled weather requests", async () => {
         /request timed out/
     );
 });
+
+test("cached JSON requests reuse successful responses briefly", async () => {
+    let fetchCount = 0;
+    const fetchStub = async () => {
+        fetchCount += 1;
+        return { ok: true, json: async () => ({ fetchCount }) };
+    };
+    const cachedRequest = weather.createCachedJsonRequest(fetchStub, 1000, 60000);
+
+    const first = await cachedRequest("https://example.test/weather");
+    const second = await cachedRequest("https://example.test/weather");
+
+    assert.equal(fetchCount, 1);
+    assert.deepEqual(second, first);
+});
+
+test("cached JSON requests remove failed entries for retry", async () => {
+    let fetchCount = 0;
+    const fetchStub = async () => {
+        fetchCount += 1;
+        if (fetchCount === 1) throw new Error("offline");
+        return { ok: true, json: async () => ({ recovered: true }) };
+    };
+    const cachedRequest = weather.createCachedJsonRequest(fetchStub, 1000, 60000);
+
+    await assert.rejects(() => cachedRequest("https://example.test/weather"), /offline/);
+    assert.deepEqual(await cachedRequest("https://example.test/weather"), { recovered: true });
+    assert.equal(fetchCount, 2);
+});
