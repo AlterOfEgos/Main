@@ -80,6 +80,35 @@
         return `https://api.open-meteo.com/v1/forecast?${params}`;
     }
 
+    function buildForecastCacheKey(location, unit) {
+        if (!location || !Number.isFinite(location.latitude) || !Number.isFinite(location.longitude)) {
+            throw new Error("A valid location is required.");
+        }
+        const temperatureUnit = unit === "fahrenheit" ? "fahrenheit" : "celsius";
+        return `alterofegos-weather-forecast:${location.latitude.toFixed(4)},${location.longitude.toFixed(4)}:${temperatureUnit}`;
+    }
+
+    function readForecastCache(storage, location, unit, ttlMs = 600000, nowMs = Date.now()) {
+        try {
+            const cached = JSON.parse(storage.getItem(buildForecastCacheKey(location, unit)));
+            if (!cached || !Number.isFinite(cached.savedAt) || nowMs - cached.savedAt >= ttlMs) return null;
+            return cached.data || null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function writeForecastCache(storage, location, unit, data, nowMs = Date.now()) {
+        try {
+            storage.setItem(buildForecastCacheKey(location, unit), JSON.stringify({
+                savedAt: nowMs,
+                data
+            }));
+        } catch (error) {
+            // The weather dashboard still works when browser storage is unavailable or full.
+        }
+    }
+
     async function requestJson(fetchImpl, url, signal, timeoutMs = 15000) {
         const controller = typeof AbortController === "function" ? new AbortController() : null;
         let timedOut = false;
@@ -111,5 +140,15 @@
         }
     }
 
-    return { getConditions, formatTemperature, buildGeocodingUrl, normalizeLocations, buildForecastUrl, requestJson };
+    return {
+        getConditions,
+        formatTemperature,
+        buildGeocodingUrl,
+        normalizeLocations,
+        buildForecastUrl,
+        buildForecastCacheKey,
+        readForecastCache,
+        writeForecastCache,
+        requestJson
+    };
 });
