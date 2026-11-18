@@ -95,3 +95,30 @@ test("requestJson times out stalled weather requests", async () => {
         /request timed out/
     );
 });
+
+test("forecast cache reuses fresh data for the same location and unit", () => {
+    const values = new Map();
+    const storage = {
+        getItem(key) { return values.has(key) ? values.get(key) : null; },
+        setItem(key, value) { values.set(key, value); }
+    };
+    const location = { latitude: 40.7128, longitude: -74.0060 };
+    const data = { current: { temperature_2m: 20 }, daily: { time: ["2026-11-18"] } };
+
+    weather.writeForecastCache(storage, location, "celsius", data, 1000);
+    assert.deepEqual(weather.readForecastCache(storage, location, "celsius", 6000), data);
+});
+
+test("forecast cache expires after ten minutes and separates units", () => {
+    const values = new Map();
+    const storage = {
+        getItem(key) { return values.has(key) ? values.get(key) : null; },
+        setItem(key, value) { values.set(key, value); }
+    };
+    const location = { latitude: 48.8566, longitude: 2.3522 };
+    const data = { current: { temperature_2m: 18 }, daily: { time: ["2026-11-18"] } };
+
+    weather.writeForecastCache(storage, location, "celsius", data, 1000);
+    assert.equal(weather.readForecastCache(storage, location, "fahrenheit", 2000), null);
+    assert.equal(weather.readForecastCache(storage, location, "celsius", 601001), null);
+});
