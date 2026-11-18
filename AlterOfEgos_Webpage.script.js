@@ -95,7 +95,7 @@ function setBusy(busy) {
 }
 
 async function getJson(url) {
-    return utils.requestJson(window.fetch.bind(window), url, undefined, 15000);
+    return utils.requestJson(window.fetch.bind(window), url, undefined, 15000, 300000);
 }
 
 function showLocationChoices(locations) {

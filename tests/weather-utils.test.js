@@ -82,6 +82,23 @@ test("requestJson propagates network errors", async () => {
     await assert.rejects(weather.requestJson(fetchStub, "https://example.test"), /offline/);
 });
 
+test("requestJson caches successful responses for the requested TTL", async () => {
+    weather.clearJsonCache();
+    let fetchCount = 0;
+    const fetchStub = async () => {
+        fetchCount += 1;
+        return { ok: true, json: async () => ({ count: fetchCount }) };
+    };
+
+    const first = await weather.requestJson(fetchStub, "https://example.test/cache", undefined, 15000, 300000);
+    const second = await weather.requestJson(fetchStub, "https://example.test/cache", undefined, 15000, 300000);
+
+    assert.deepEqual(first, { count: 1 });
+    assert.deepEqual(second, { count: 1 });
+    assert.equal(fetchCount, 1);
+    weather.clearJsonCache();
+});
+
 test("requestJson times out stalled weather requests", async () => {
     const fetchStub = async (_url, options) => new Promise((_resolve, reject) => {
         options.signal.addEventListener("abort", () => {
