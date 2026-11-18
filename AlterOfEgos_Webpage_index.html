@@ -12,14 +12,43 @@
 </head>
 <body>
     <header id="hero">
-        <img src="https://i.imgur.com/1pPSIB7.jpeg" alt="Profile photo of AlterOfEgos" id="headshot" decoding="async">
-        <h1>Welcome to My Personal Page</h1>
+        <div class="hero-grid" aria-hidden="true"></div>
+        <div class="orb orb-one" aria-hidden="true"></div>
+        <div class="orb orb-two" aria-hidden="true"></div>
+        <div class="hero-content">
+            <div class="portrait-shell">
+                <div class="portrait-ring" aria-hidden="true"></div>
+                <img src="https://i.imgur.com/1pPSIB7.jpeg" alt="Profile photo of AlterOfEgos" id="headshot" decoding="async">
+                <span class="online-pulse" aria-label="Online"></span>
+            </div>
+            <div class="hero-copy">
+                <p class="hero-kicker"><span></span> Digital identity / live</p>
+                <h1>AlterOfEgos</h1>
+                <p class="hero-tagline">Explorer of worlds, weather &amp; late-night ideas.</p>
+                <div class="hero-actions">
+                    <a href="#weather" class="primary-action">Explore forecast <span aria-hidden="true">↘</span></a>
+                    <a href="#contact" class="text-action">Get in touch <span aria-hidden="true">→</span></a>
+                </div>
+            </div>
+        </div>
+        <div class="hero-index" aria-hidden="true">
+            <span>AOE</span>
+            <strong>01</strong>
+        </div>
     </header>
 
     <main>
         <nav id="social-links" aria-label="Social profiles">
-            <a href="https://snapchat.com/add/AlterOfEgos" class="social-button">Add me on Snapchat</a>
-            <a href="https://steamcommunity.com/id/TheAlterOfEgos/" class="social-button">Add me on Steam</a>
+            <a href="https://snapchat.com/add/AlterOfEgos" class="social-button">
+                <span class="social-icon" aria-hidden="true">S</span>
+                <span><small>Find me on</small>Snapchat</span>
+                <b aria-hidden="true">↗</b>
+            </a>
+            <a href="https://steamcommunity.com/id/TheAlterOfEgos/" class="social-button">
+                <span class="social-icon steam-icon" aria-hidden="true">STEAM</span>
+                <span><small>Play with me on</small>Steam</span>
+                <b aria-hidden="true">↗</b>
+            </a>
         </nav>
 
         <section id="weather" aria-labelledby="weather-heading">
