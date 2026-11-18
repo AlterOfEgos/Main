@@ -80,6 +80,46 @@
         return `https://api.open-meteo.com/v1/forecast?${params}`;
     }
 
+    function createForecastCache(storage, ttlMs = 10 * 60 * 1000) {
+        const prefix = "alterofegos-weather-forecast:";
+
+        function buildKey(location, unit) {
+            if (!location || !Number.isFinite(location.latitude) || !Number.isFinite(location.longitude)) return null;
+            const latitude = location.latitude.toFixed(4);
+            const longitude = location.longitude.toFixed(4);
+            const normalizedUnit = unit === "fahrenheit" ? "fahrenheit" : "celsius";
+            return `${prefix}${latitude},${longitude}:${normalizedUnit}`;
+        }
+
+        function get(location, unit) {
+            const key = buildKey(location, unit);
+            if (!key) return null;
+            try {
+                const entry = JSON.parse(storage?.getItem(key));
+                if (!entry || !Number.isFinite(entry.cachedAt) || !entry.data) return null;
+                if (Date.now() - entry.cachedAt >= ttlMs) {
+                    storage.removeItem?.(key);
+                    return null;
+                }
+                return entry.data;
+            } catch (error) {
+                return null;
+            }
+        }
+
+        function set(location, unit, data) {
+            const key = buildKey(location, unit);
+            if (!key || !data) return;
+            try {
+                storage?.setItem(key, JSON.stringify({ cachedAt: Date.now(), data }));
+            } catch (error) {
+                // Forecast caching is optional when browser storage is unavailable or full.
+            }
+        }
+
+        return { get, set };
+    }
+
     async function requestJson(fetchImpl, url, signal, timeoutMs = 15000) {
         const controller = typeof AbortController === "function" ? new AbortController() : null;
         let timedOut = false;
@@ -111,5 +151,5 @@
         }
     }
 
-    return { getConditions, formatTemperature, buildGeocodingUrl, normalizeLocations, buildForecastUrl, requestJson };
+    return { getConditions, formatTemperature, buildGeocodingUrl, normalizeLocations, buildForecastUrl, createForecastCache, requestJson };
 });

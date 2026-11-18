@@ -12,6 +12,7 @@ const PREFERENCES_KEY = "alterofegos-weather-preferences";
 const EMAILJS_URL = "https://cdn.emailjs.com/dist/email.min.js";
 let emailJsLoadPromise = null;
 let emailJsInitialized = false;
+const forecastCache = utils.createForecastCache(window.localStorage);
 
 function loadEmailJs() {
     if (window.emailjs) {
@@ -147,7 +148,21 @@ async function loadWeather(location, alreadyBusy = false, rememberLocation = tru
 
     try {
         const unit = temperatureUnit.value;
+        const cachedData = forecastCache.get(location, unit);
+        if (cachedData) {
+            renderWeather(location, cachedData, unit);
+            selectedLocation = location;
+            weatherResults.hidden = false;
+            if (rememberLocation) {
+                savedLocation = location;
+                cityInput.value = location.label;
+                savePreferences();
+            }
+            setWeatherStatus(`Forecast loaded for ${location.label}.`);
+            return;
+        }
         const data = await getJson(utils.buildForecastUrl(location, unit));
+        forecastCache.set(location, unit, data);
         renderWeather(location, data, unit);
         selectedLocation = location;
         weatherResults.hidden = false;
