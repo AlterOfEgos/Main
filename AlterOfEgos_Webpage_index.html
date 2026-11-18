@@ -2,50 +2,55 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Your Name's Personal Page</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Personal page and contact information for AlterOfEgos.">
+    <meta name="theme-color" content="#20212a">
+    <title>AlterOfEgos | Personal Page</title>
     <link rel="stylesheet" href="AlterOfEgos_Webpage_styles.css">
-    <script src="https://cdn.emailjs.com/dist/email.min.js"></script>
+    <script defer src="https://cdn.emailjs.com/dist/email.min.js"></script>
+    <script defer src="AlterOfEgos_Webpage.script.js"></script>
 </head>
 <body>
-    <!-- Hero Section -->
-    <section id="hero">
-        <img src="https://i.imgur.com/1pPSIB7.jpeg" alt="Your Headshot" id="headshot">
+    <header id="hero">
+        <img
+            src="https://i.imgur.com/1pPSIB7.jpeg"
+            alt="Profile photo of AlterOfEgos"
+            id="headshot"
+            decoding="async"
+        >
         <h1>Welcome to My Personal Page</h1>
-    </section>
+    </header>
 
-    <!-- Social Links Section -->
-    <section id="social-links">
-        <a href="https://snapchat.com/add/AlterOfEgos" class="social-button">Add me on Snapchat</a>
-        <a href="https://steamcommunity.com/id/TheAlterOfEgos/" class="social-button">Add me on Steam</a>
-    </section>
+    <main>
+        <nav id="social-links" aria-label="Social profiles">
+            <a href="https://snapchat.com/add/AlterOfEgos" class="social-button">Add me on Snapchat</a>
+            <a href="https://steamcommunity.com/id/TheAlterOfEgos/" class="social-button">Add me on Steam</a>
+        </nav>
 
-    <!-- Networking/Contact Section -->
-    <section id="contact">
-        <h2>Connect with Me</h2>
-        <form id="contact-form">
-            <label for="email">Email:</label>
-            <input type="email" id="email" name="email" required>
-            <label for="message">Message:</label>
-            <textarea id="message" name="message" required></textarea>
-            <button type="submit">Send Request</button>
-        </form>
-    </section>
+        <section id="contact" aria-labelledby="contact-heading">
+            <h2 id="contact-heading">Connect with Me</h2>
+            <form id="contact-form">
+                <label for="email">Your email address</label>
+                <input type="email" id="email" name="email" autocomplete="email" required>
 
-    <!-- Profile Section -->
-    <section id="profile">
-        <h2>About Me</h2>
-        <p>Short bio or introduction</p>
-    </section>
+                <label for="message">Message</label>
+                <textarea id="message" name="message" rows="5" required></textarea>
 
-    <!-- Footer -->
+                <button type="submit">Send message</button>
+                <p id="form-status" role="status" aria-live="polite"></p>
+            </form>
+        </section>
+
+        <section id="profile" aria-labelledby="profile-heading">
+            <h2 id="profile-heading">About Me</h2>
+            <p>Short bio or introduction</p>
+        </section>
+    </main>
+
     <footer>
-        <p>"Your pain is the breaking of the shell that encloses your understanding."</p>
-        <div id="testimonials">
-            <!-- Add testimonials or comments here -->
-        </div>
+        <blockquote>
+            “Your pain is the breaking of the shell that encloses your understanding.”
+        </blockquote>
     </footer>
-
-    <script src="AlterOfEgos_Webpage.script.js"></script>
 </body>
 </html>
