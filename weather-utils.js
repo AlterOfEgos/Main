@@ -5,6 +5,9 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
     "use strict";
 
+    const RESPONSE_CACHE_TTL_MS = 10 * 60 * 1000;
+    const responseCache = new Map();
+
     const weatherCodes = {
         0: ["Clear sky", "☀️"], 1: ["Mainly clear", "🌤️"],
         2: ["Partly cloudy", "⛅"], 3: ["Overcast", "☁️"],
@@ -109,6 +112,12 @@
     }
 
     async function requestJson(fetchImpl, url, signal, timeoutMs = 15000) {
+        const cached = responseCache.get(url);
+        if (!signal?.aborted && cached && cached.expiresAt > Date.now()) {
+            return cached.payload;
+        }
+        if (cached) responseCache.delete(url);
+
         const controller = typeof AbortController === "function" ? new AbortController() : null;
         let timedOut = false;
         const timeout = Number.isFinite(timeoutMs) && timeoutMs > 0
@@ -125,7 +134,12 @@
             if (!response.ok) {
                 throw new Error("The weather service is temporarily unavailable. Please try again.");
             }
-            return await response.json();
+            const payload = await response.json();
+            responseCache.set(url, {
+                payload,
+                expiresAt: Date.now() + RESPONSE_CACHE_TTL_MS
+            });
+            return payload;
         } catch (error) {
             if (timedOut) {
                 throw new Error("The weather request timed out. Please try again.");
