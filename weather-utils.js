@@ -80,6 +80,34 @@
         return `https://api.open-meteo.com/v1/forecast?${params}`;
     }
 
+    function validateForecastData(data) {
+        const current = data?.current;
+        const daily = data?.daily;
+        const hasFiniteCurrentValues =
+            Number.isFinite(current?.temperature_2m) &&
+            Number.isFinite(current?.apparent_temperature) &&
+            Number.isFinite(current?.relative_humidity_2m) &&
+            Number.isFinite(current?.wind_speed_10m) &&
+            Number.isFinite(current?.weather_code);
+        const hasDailyData =
+            Array.isArray(daily?.time) &&
+            Array.isArray(daily?.weather_code) &&
+            Array.isArray(daily?.temperature_2m_max) &&
+            Array.isArray(daily?.temperature_2m_min) &&
+            daily.time.length > 0 &&
+            daily.time.length === daily.weather_code.length &&
+            daily.time.length === daily.temperature_2m_max.length &&
+            daily.time.length === daily.temperature_2m_min.length &&
+            daily.weather_code.every(Number.isFinite) &&
+            daily.temperature_2m_max.every(Number.isFinite) &&
+            daily.temperature_2m_min.every(Number.isFinite);
+
+        if (!hasFiniteCurrentValues || !hasDailyData) {
+            throw new Error("The weather service returned an incomplete forecast. Please try again.");
+        }
+        return data;
+    }
+
     async function requestJson(fetchImpl, url, signal, timeoutMs = 15000) {
         const controller = typeof AbortController === "function" ? new AbortController() : null;
         let timedOut = false;
@@ -111,5 +139,5 @@
         }
     }
 
-    return { getConditions, formatTemperature, buildGeocodingUrl, normalizeLocations, buildForecastUrl, requestJson };
+    return { getConditions, formatTemperature, buildGeocodingUrl, normalizeLocations, buildForecastUrl, validateForecastData, requestJson };
 });
