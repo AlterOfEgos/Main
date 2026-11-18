@@ -95,3 +95,35 @@ test("requestJson times out stalled weather requests", async () => {
         /request timed out/
     );
 });
+
+test("forecast cache stores and returns data by location and unit", () => {
+    const values = new Map();
+    const storage = {
+        getItem(key) { return values.get(key) || null; },
+        setItem(key, value) { values.set(key, value); },
+        removeItem(key) { values.delete(key); }
+    };
+    const cache = weather.createForecastCache(storage, 1000);
+    const location = { latitude: 40.7128, longitude: -74.006, label: "New York" };
+    const payload = { current: { temperature_2m: 20 } };
+
+    cache.set(location, "celsius", payload);
+    assert.deepEqual(cache.get(location, "celsius"), payload);
+    assert.equal(cache.get(location, "fahrenheit"), null);
+});
+
+test("forecast cache expires entries after the TTL", () => {
+    const values = new Map();
+    const storage = {
+        getItem(key) { return values.get(key) || null; },
+        setItem(key, value) { values.set(key, value); },
+        removeItem(key) { values.delete(key); }
+    };
+    const cache = weather.createForecastCache(storage, 1);
+    const location = { latitude: 48.8566, longitude: 2.3522, label: "Paris" };
+
+    cache.set(location, "celsius", { current: {} });
+    const start = Date.now();
+    while (Date.now() - start < 5) {}
+    assert.equal(cache.get(location, "celsius"), null);
+});
