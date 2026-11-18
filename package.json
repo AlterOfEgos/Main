@@ -1,0 +1,7 @@
+{
+  "name": "alterofegos-weather-dashboard-tests",
+  "private": true,
+  "scripts": {
+    "test": "node --test"
+  }
+}

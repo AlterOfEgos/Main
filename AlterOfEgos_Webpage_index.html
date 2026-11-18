@@ -8,16 +8,12 @@
     <title>AlterOfEgos | Personal Page</title>
     <link rel="stylesheet" href="AlterOfEgos_Webpage_styles.css">
     <script defer src="https://cdn.emailjs.com/dist/email.min.js"></script>
+    <script defer src="weather-utils.js"></script>
     <script defer src="AlterOfEgos_Webpage.script.js"></script>
 </head>
 <body>
     <header id="hero">
-        <img
-            src="https://i.imgur.com/1pPSIB7.jpeg"
-            alt="Profile photo of AlterOfEgos"
-            id="headshot"
-            decoding="async"
-        >
+        <img src="https://i.imgur.com/1pPSIB7.jpeg" alt="Profile photo of AlterOfEgos" id="headshot" decoding="async">
         <h1>Welcome to My Personal Page</h1>
     </header>
 
@@ -44,21 +40,15 @@
 
             <form id="weather-search" role="search">
                 <label class="visually-hidden" for="weather-city">Search for a city</label>
-                <input
-                    type="search"
-                    id="weather-city"
-                    name="city"
-                    placeholder="Enter a city, e.g. Tokyo"
-                    autocomplete="address-level2"
-                    required
-                >
+                <input type="search" id="weather-city" name="city" placeholder="Enter a city, e.g. Tokyo" autocomplete="address-level2" required>
                 <button type="submit">Search</button>
                 <button type="button" id="use-location" class="secondary-button">Use my location</button>
             </form>
 
-            <p id="weather-status" class="weather-status" role="status" aria-live="polite">Search for a city or use your location to see the forecast.</p>
+            <div id="location-choices" class="location-choices" role="group" aria-label="Matching locations" hidden></div>
+            <p id="weather-status" class="weather-status" role="status" aria-live="polite" aria-atomic="true">Search for a city or use your location to see the forecast.</p>
 
-            <div id="weather-results" class="weather-results" hidden>
+            <div id="weather-results" class="weather-results" aria-busy="false" hidden>
                 <article class="current-weather" aria-labelledby="current-city">
                     <div class="current-main">
                         <div>
@@ -76,10 +66,8 @@
                     </dl>
                 </article>
 
-                <div class="forecast-heading">
-                    <h3>5-day forecast</h3>
-                </div>
-                <div id="forecast-list" class="forecast-list" aria-label="Five-day forecast"></div>
+                <div class="forecast-heading"><h3>5-day forecast</h3></div>
+                <div id="forecast-list" class="forecast-list" role="list" aria-label="Five-day forecast"></div>
                 <p class="weather-credit">Weather data provided by <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>.</p>
             </div>
         </section>
@@ -89,25 +77,21 @@
             <form id="contact-form">
                 <label for="email">Your email address</label>
                 <input type="email" id="email" name="email" autocomplete="email" required>
-
                 <label for="message">Message</label>
                 <textarea id="message" name="message" rows="5" required></textarea>
-
                 <button type="submit">Send message</button>
-                <p id="form-status" role="status" aria-live="polite"></p>
+                <p id="form-status" role="status" aria-live="polite" aria-atomic="true"></p>
             </form>
         </section>
 
         <section id="profile" aria-labelledby="profile-heading">
             <h2 id="profile-heading">About Me</h2>
-            <p>Short bio or introduction</p>
+            <p>I’m AlterOfEgos. You can find me on Snapchat and Steam, or use the contact form to get in touch.</p>
         </section>
     </main>
 
     <footer>
-        <blockquote>
-            “Your pain is the breaking of the shell that encloses your understanding.”
-        </blockquote>
+        <blockquote>“Your pain is the breaking of the shell that encloses your understanding.”</blockquote>
     </footer>
 </body>
 </html>
