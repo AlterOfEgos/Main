@@ -111,5 +111,27 @@
         }
     }
 
-    return { getConditions, formatTemperature, buildGeocodingUrl, normalizeLocations, buildForecastUrl, requestJson };
+    function createCachedJsonRequest(fetchImpl, timeoutMs = 15000, ttlMs = 300000) {
+        const cache = new Map();
+
+        return async function cachedRequest(url, signal) {
+            const now = Date.now();
+            const cached = cache.get(url);
+            if (cached?.expiresAt > now) return cached.data;
+            if (cached?.promise) return cached.promise;
+
+            const promise = requestJson(fetchImpl, url, signal, timeoutMs).then((data) => {
+                cache.set(url, { expiresAt: Date.now() + ttlMs, data });
+                return data;
+            }).catch((error) => {
+                cache.delete(url);
+                throw error;
+            });
+
+            cache.set(url, { promise });
+            return promise;
+        };
+    }
+
+    return { getConditions, formatTemperature, buildGeocodingUrl, normalizeLocations, buildForecastUrl, requestJson, createCachedJsonRequest };
 });
