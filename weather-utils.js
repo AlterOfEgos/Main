@@ -5,6 +5,8 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
     "use strict";
 
+    const jsonCache = new Map();
+
     const weatherCodes = {
         0: ["Clear sky", "☀️"], 1: ["Mainly clear", "🌤️"],
         2: ["Partly cloudy", "⛅"], 3: ["Overcast", "☁️"],
@@ -80,7 +82,12 @@
         return `https://api.open-meteo.com/v1/forecast?${params}`;
     }
 
-    async function requestJson(fetchImpl, url, signal, timeoutMs = 15000) {
+    async function requestJson(fetchImpl, url, signal, timeoutMs = 15000, cacheTtlMs = 0) {
+        const now = Date.now();
+        const cached = cacheTtlMs > 0 ? jsonCache.get(url) : null;
+        if (cached && cached.expiresAt > now) return cached.payload;
+        if (cached) jsonCache.delete(url);
+
         const controller = typeof AbortController === "function" ? new AbortController() : null;
         let timedOut = false;
         const timeout = Number.isFinite(timeoutMs) && timeoutMs > 0
@@ -97,7 +104,14 @@
             if (!response.ok) {
                 throw new Error("The weather service is temporarily unavailable. Please try again.");
             }
-            return await response.json();
+            const payload = await response.json();
+            if (cacheTtlMs > 0) {
+                jsonCache.set(url, {
+                    expiresAt: Date.now() + cacheTtlMs,
+                    payload
+                });
+            }
+            return payload;
         } catch (error) {
             if (timedOut) {
                 throw new Error("The weather request timed out. Please try again.");
@@ -111,5 +125,9 @@
         }
     }
 
-    return { getConditions, formatTemperature, buildGeocodingUrl, normalizeLocations, buildForecastUrl, requestJson };
+    function clearJsonCache() {
+        jsonCache.clear();
+    }
+
+    return { getConditions, formatTemperature, buildGeocodingUrl, normalizeLocations, buildForecastUrl, requestJson, clearJsonCache };
 });
