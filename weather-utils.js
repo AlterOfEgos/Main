@@ -21,6 +21,8 @@
         86: ["Heavy snow showers", "❄️"], 95: ["Thunderstorm", "⛈️"],
         96: ["Thunderstorm with slight hail", "⛈️"], 99: ["Thunderstorm with heavy hail", "⛈️"]
     };
+    const FORECAST_CACHE_PREFIX = "alterofegos-weather-forecast:";
+    const FORECAST_CACHE_TTL_MS = 10 * 60 * 1000;
 
     function getConditions(code) {
         return weatherCodes[code] || ["Conditions unavailable", "🌡️"];
@@ -80,6 +82,37 @@
         return `https://api.open-meteo.com/v1/forecast?${params}`;
     }
 
+    function getForecastCacheKey(location, unit) {
+        if (!location || !Number.isFinite(location.latitude) || !Number.isFinite(location.longitude)) return null;
+        const normalizedUnit = unit === "fahrenheit" ? "fahrenheit" : "celsius";
+        const latitude = location.latitude.toFixed(4);
+        const longitude = location.longitude.toFixed(4);
+        return `${FORECAST_CACHE_PREFIX}${latitude},${longitude}:${normalizedUnit}`;
+    }
+
+    function readForecastCache(storage, location, unit, now = Date.now()) {
+        const key = getForecastCacheKey(location, unit);
+        if (!key || !storage) return null;
+        try {
+            const entry = JSON.parse(storage.getItem(key));
+            if (!entry || !Number.isFinite(entry.timestamp) || now - entry.timestamp >= FORECAST_CACHE_TTL_MS) return null;
+            if (!entry.data?.current || !entry.data?.daily) return null;
+            return entry.data;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function writeForecastCache(storage, location, unit, data, now = Date.now()) {
+        const key = getForecastCacheKey(location, unit);
+        if (!key || !storage || !data) return;
+        try {
+            storage.setItem(key, JSON.stringify({ timestamp: now, data }));
+        } catch (error) {
+            // Forecast caching is optional when browser storage is unavailable or full.
+        }
+    }
+
     async function requestJson(fetchImpl, url, signal, timeoutMs = 15000) {
         const controller = typeof AbortController === "function" ? new AbortController() : null;
         let timedOut = false;
@@ -111,5 +144,14 @@
         }
     }
 
-    return { getConditions, formatTemperature, buildGeocodingUrl, normalizeLocations, buildForecastUrl, requestJson };
+    return {
+        getConditions,
+        formatTemperature,
+        buildGeocodingUrl,
+        normalizeLocations,
+        buildForecastUrl,
+        readForecastCache,
+        writeForecastCache,
+        requestJson
+    };
 });
