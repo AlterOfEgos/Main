@@ -9,7 +9,8 @@ const cityInput = document.getElementById("weather-city");
 const searchButton = weatherSearch.querySelector('button[type="submit"]');
 const locationButton = document.getElementById("use-location");
 const PREFERENCES_KEY = "alterofegos-weather-preferences";
-const EMAILJS_URL = "https://cdn.emailjs.com/dist/email.min.js";
+const EMAILJS_URL = "https://cdn.jsdelivr.net/npm/@emailjs/browser@4.4.1/dist/email.min.js";
+const EMAILJS_INTEGRITY = "sha384-SALc35EccAf6RzGw4iNsyj7kTPr33K7RoGzYu+7heZhT8s0GZouafRiCg1qy44AS";
 let emailJsLoadPromise = null;
 let emailJsInitialized = false;
 
@@ -25,6 +26,8 @@ function loadEmailJs() {
     if (!emailJsLoadPromise) {
         const script = document.createElement("script");
         script.src = EMAILJS_URL;
+        script.integrity = EMAILJS_INTEGRITY;
+        script.crossOrigin = "anonymous";
         script.async = true;
 
         emailJsLoadPromise = new Promise((resolve, reject) => {
