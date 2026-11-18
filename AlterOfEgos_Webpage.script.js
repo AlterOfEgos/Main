@@ -9,6 +9,40 @@ const cityInput = document.getElementById("weather-city");
 const searchButton = weatherSearch.querySelector('button[type="submit"]');
 const locationButton = document.getElementById("use-location");
 const PREFERENCES_KEY = "alterofegos-weather-preferences";
+const EMAILJS_URL = "https://cdn.emailjs.com/dist/email.min.js";
+let emailJsLoadPromise = null;
+let emailJsInitialized = false;
+
+function loadEmailJs() {
+    if (window.emailjs) {
+        if (!emailJsInitialized) {
+            window.emailjs.init("lz1RP-zscAZDnEhq1");
+            emailJsInitialized = true;
+        }
+        return Promise.resolve(window.emailjs);
+    }
+
+    if (!emailJsLoadPromise) {
+        const script = document.createElement("script");
+        script.src = EMAILJS_URL;
+        script.async = true;
+
+        emailJsLoadPromise = new Promise((resolve, reject) => {
+            script.addEventListener("load", resolve, { once: true });
+            script.addEventListener("error", () => reject(new Error("Unable to load the contact service.")), { once: true });
+            document.head.append(script);
+        }).then(() => {
+            if (!window.emailjs) throw new Error("The contact service is unavailable.");
+            window.emailjs.init("lz1RP-zscAZDnEhq1");
+            emailJsInitialized = true;
+            return window.emailjs;
+        }).catch((error) => {
+            emailJsLoadPromise = null;
+            throw error;
+        });
+    }
+    return emailJsLoadPromise;
+}
 
 function readPreferences() {
     try {
@@ -212,15 +246,11 @@ if (contactForm) {
         const submitButton = contactForm.querySelector('button[type="submit"]');
         if (submitButton.disabled) return;
 
-        if (!window.emailjs) {
-            status.textContent = "The contact service is unavailable. Please try again later.";
-            return;
-        }
-
         submitButton.disabled = true;
         status.textContent = "Sending your message…";
         try {
-            await window.emailjs.sendForm("service_69w7fcj", "template_qm9dhuy", contactForm);
+            const emailjs = await loadEmailJs();
+            await emailjs.sendForm("service_69w7fcj", "template_qm9dhuy", contactForm);
             status.textContent = "Message sent successfully.";
             contactForm.reset();
         } catch (error) {
@@ -229,8 +259,6 @@ if (contactForm) {
             submitButton.disabled = false;
         }
     });
-
-    if (window.emailjs) window.emailjs.init("lz1RP-zscAZDnEhq1");
 }
 
 // Restore the last searched city automatically; device coordinates are never saved.
