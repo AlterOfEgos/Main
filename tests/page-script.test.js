@@ -22,6 +22,16 @@ function createElement() {
     };
 }
 
+test("hero image reserves its layout space and critical resources are preconnected", () => {
+    const html = fs.readFileSync(path.join(__dirname, "..", "AlterOfEgos_Webpage_index.html"), "utf8");
+
+    assert.match(html, /id="headshot"[^>]*width="210"[^>]*height="210"/);
+    assert.match(html, /id="headshot"[^>]*fetchpriority="high"/);
+    assert.match(html, /rel="preconnect" href="https:\/\/i\.imgur\.com"/);
+    assert.match(html, /rel="preconnect" href="https:\/\/api\.open-meteo\.com"/);
+    assert.match(html, /rel="preconnect" href="https:\/\/geocoding-api\.open-meteo\.com"/);
+});
+
 test("EmailJS is loaded on contact submission and initialized only once", async () => {
     const elements = new Map();
     const scripts = [];

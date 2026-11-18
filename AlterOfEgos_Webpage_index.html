@@ -6,6 +6,9 @@
     <meta name="description" content="Personal page and local weather dashboard for AlterOfEgos.">
     <meta name="theme-color" content="#20212a">
     <title>AlterOfEgos | Personal Page</title>
+    <link rel="preconnect" href="https://i.imgur.com">
+    <link rel="preconnect" href="https://api.open-meteo.com">
+    <link rel="preconnect" href="https://geocoding-api.open-meteo.com">
     <link rel="stylesheet" href="AlterOfEgos_Webpage_styles.css">
     <script defer src="weather-utils.js"></script>
     <script defer src="AlterOfEgos_Webpage.script.js"></script>
@@ -18,7 +21,7 @@
         <div class="hero-content">
             <div class="portrait-shell">
                 <div class="portrait-ring" aria-hidden="true"></div>
-                <img src="https://i.imgur.com/1pPSIB7.jpeg" alt="Profile photo of AlterOfEgos" id="headshot" decoding="async">
+                <img src="https://i.imgur.com/1pPSIB7.jpeg" alt="Profile photo of AlterOfEgos" id="headshot" width="210" height="210" fetchpriority="high" decoding="async">
                 <span class="online-pulse" aria-label="Online"></span>
             </div>
             <div class="hero-copy">
