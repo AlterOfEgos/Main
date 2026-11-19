@@ -66,6 +66,7 @@ temperatureUnit.value = savedPreferences.unit;
 let savedLocation = savedPreferences.location;
 let selectedLocation = null;
 let isBusy = false;
+const weatherRequestCache = utils.createRequestCache(window.fetch.bind(window));
 
 if (savedLocation) cityInput.value = savedLocation.label;
 
@@ -95,7 +96,7 @@ function setBusy(busy) {
 }
 
 async function getJson(url) {
-    return utils.requestJson(window.fetch.bind(window), url);
+    return weatherRequestCache.get(url);
 }
 
 function showLocationChoices(locations) {
