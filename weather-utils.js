@@ -27,56 +27,129 @@
     }
 
     function formatTemperature(value, unit) {
+        if (!Number.isFinite(value)) return "Unavailable";
         return `${Math.round(value)}°${unit === "fahrenheit" ? "F" : "C"}`;
     }
 
     function buildGeocodingUrl(city) {
-        const params = new URLSearchParams({ name: city, count: "10", language: "en", format: "json" });
+        const name = typeof city === "string" ? city.trim() : "";
+        if (!name) throw new Error("Enter a city name.");
+        const params = new URLSearchParams({ name, count: "10", language: "en", format: "json" });
         return `https://geocoding-api.open-meteo.com/v1/search?${params}`;
     }
 
     function normalizeLocations(results) {
-        return (results || []).filter((place) => Number.isFinite(place.latitude) && Number.isFinite(place.longitude))
-            .map((place) => ({
+        const seen = new Set();
+        return (results || []).reduce((locations, place) => {
+            if (!place || !Number.isFinite(place.latitude) || !Number.isFinite(place.longitude)) return locations;
+            if (place.latitude < -90 || place.latitude > 90 || place.longitude < -180 || place.longitude > 180) return locations;
+
+            const key = `${place.latitude},${place.longitude}`;
+            if (seen.has(key)) return locations;
+            seen.add(key);
+
+            const label = [place.name, place.admin1, place.country].filter((part) => typeof part === "string" && part.trim()).join(", ");
+            if (!label) return locations;
+            locations.push({
                 latitude: place.latitude,
                 longitude: place.longitude,
-                label: [place.name, place.admin1, place.country].filter(Boolean).join(", ")
-            }));
+                label
+            });
+            return locations;
+        }, []);
     }
 
     function buildForecastUrl(location, unit) {
+        if (!location || !Number.isFinite(location.latitude) || !Number.isFinite(location.longitude)) {
+            throw new Error("A valid location is required.");
+        }
+        if (location.latitude < -90 || location.latitude > 90 || location.longitude < -180 || location.longitude > 180) {
+            throw new Error("A valid location is required.");
+        }
+        const temperatureUnit = unit === "fahrenheit" ? "fahrenheit" : "celsius";
         const params = new URLSearchParams({
             latitude: String(location.latitude),
             longitude: String(location.longitude),
             current: "temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m",
             daily: "weather_code,temperature_2m_max,temperature_2m_min",
-            temperature_unit: unit,
-            wind_speed_unit: unit === "fahrenheit" ? "mph" : "kmh",
+            temperature_unit: temperatureUnit,
+            wind_speed_unit: temperatureUnit === "fahrenheit" ? "mph" : "kmh",
             timezone: "auto",
             forecast_days: "5"
         });
         return `https://api.open-meteo.com/v1/forecast?${params}`;
     }
 
-    async function requestJson(fetchImpl, url, signal) {
-        const response = await fetchImpl(url, { signal });
-        if (!response.ok) {
-            throw new Error("The weather service is temporarily unavailable. Please try again.");
+    function validateForecastData(data) {
+        const current = data?.current;
+        const daily = data?.daily;
+        const hasFiniteCurrentValues =
+            Number.isFinite(current?.temperature_2m) &&
+            Number.isFinite(current?.apparent_temperature) &&
+            Number.isFinite(current?.relative_humidity_2m) &&
+            Number.isFinite(current?.wind_speed_10m) &&
+            Number.isFinite(current?.weather_code);
+        const hasDailyData =
+            Array.isArray(daily?.time) &&
+            Array.isArray(daily?.weather_code) &&
+            Array.isArray(daily?.temperature_2m_max) &&
+            Array.isArray(daily?.temperature_2m_min) &&
+            daily.time.length > 0 &&
+            daily.time.length === daily.weather_code.length &&
+            daily.time.length === daily.temperature_2m_max.length &&
+            daily.time.length === daily.temperature_2m_min.length &&
+            daily.weather_code.every(Number.isFinite) &&
+            daily.temperature_2m_max.every(Number.isFinite) &&
+            daily.temperature_2m_min.every(Number.isFinite);
+
+        if (!hasFiniteCurrentValues || !hasDailyData) {
+            throw new Error("The weather service returned an incomplete forecast. Please try again.");
         }
-        return response.json();
+        return data;
+    }
+
+    async function requestJson(fetchImpl, url, signal, timeoutMs = 15000) {
+        const controller = typeof AbortController === "function" ? new AbortController() : null;
+        let timedOut = false;
+        const timeout = Number.isFinite(timeoutMs) && timeoutMs > 0
+            ? setTimeout(() => {
+                timedOut = true;
+                controller?.abort();
+            }, timeoutMs)
+            : null;
+        const relayAbort = () => controller?.abort();
+        if (signal?.addEventListener) signal.addEventListener("abort", relayAbort, { once: true });
+
+        try {
+            const response = await fetchImpl(url, { signal: controller?.signal || signal });
+            if (!response.ok) {
+                throw new Error("The weather service is temporarily unavailable. Please try again.");
+            }
+            return await response.json();
+        } catch (error) {
+            if (timedOut) {
+                throw new Error("The weather request timed out. Please try again.");
+            }
+            if (error?.name === "AbortError") throw new Error("The weather request was canceled.");
+            if (error instanceof SyntaxError) throw new Error("The weather service returned an invalid response.");
+            throw error;
+        } finally {
+            if (timeout) clearTimeout(timeout);
+            if (signal?.removeEventListener) signal.removeEventListener("abort", relayAbort);
+        }
     }
 
     function createRequestCache(fetchImpl, ttlMs = 300000, now = Date.now) {
         const cache = new Map();
 
-        async function get(url) {
+        async function get(url, signal, timeoutMs = 15000) {
             const cached = cache.get(url);
             if (cached) {
                 if (cached.expiresAt > now()) return cached.value;
                 cache.delete(url);
             }
 
-            const pending = requestJson(fetchImpl, url)
+            const pending = requestJson(fetchImpl, url, signal, timeoutMs)
                 .then((value) => {
                     cache.set(url, { value, expiresAt: now() + ttlMs });
                     return value;
@@ -92,5 +165,5 @@
         return { get };
     }
 
-    return { getConditions, formatTemperature, buildGeocodingUrl, normalizeLocations, buildForecastUrl, requestJson, createRequestCache };
+    return { getConditions, formatTemperature, buildGeocodingUrl, normalizeLocations, buildForecastUrl, validateForecastData, requestJson, createRequestCache };
 });

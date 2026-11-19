@@ -75,5 +75,15 @@ test("EmailJS is loaded on contact submission and initialized only once", async 
     await submitHandler(event);
 
     assert.equal(scripts.length, 1);
+    assert.equal(scripts[0].src, "https://cdn.jsdelivr.net/npm/@emailjs/browser@4.4.1/dist/email.min.js");
+    assert.equal(scripts[0].integrity, "sha384-SALc35EccAf6RzGw4iNsyj7kTPr33K7RoGzYu+7heZhT8s0GZouafRiCg1qy44AS");
+    assert.equal(scripts[0].crossOrigin, "anonymous");
     assert.equal(window.emailjs.initCount, 1);
+});
+
+test("hero image is prioritized and has stable intrinsic dimensions", () => {
+    const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+
+    assert.match(html, /<link rel="preload" as="image" href="assets\/profile\.webp"[^>]*fetchpriority="high"/);
+    assert.match(html, /<img src="assets\/profile\.webp"[^>]*width="768"[^>]*height="1365"[^>]*loading="eager"[^>]*fetchpriority="high"/);
 });

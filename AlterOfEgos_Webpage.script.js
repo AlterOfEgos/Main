@@ -9,7 +9,8 @@ const cityInput = document.getElementById("weather-city");
 const searchButton = weatherSearch.querySelector('button[type="submit"]');
 const locationButton = document.getElementById("use-location");
 const PREFERENCES_KEY = "alterofegos-weather-preferences";
-const EMAILJS_URL = "https://cdn.emailjs.com/dist/email.min.js";
+const EMAILJS_URL = "https://cdn.jsdelivr.net/npm/@emailjs/browser@4.4.1/dist/email.min.js";
+const EMAILJS_INTEGRITY = "sha384-SALc35EccAf6RzGw4iNsyj7kTPr33K7RoGzYu+7heZhT8s0GZouafRiCg1qy44AS";
 let emailJsLoadPromise = null;
 let emailJsInitialized = false;
 
@@ -25,6 +26,8 @@ function loadEmailJs() {
     if (!emailJsLoadPromise) {
         const script = document.createElement("script");
         script.src = EMAILJS_URL;
+        script.integrity = EMAILJS_INTEGRITY;
+        script.crossOrigin = "anonymous";
         script.async = true;
 
         emailJsLoadPromise = new Promise((resolve, reject) => {
@@ -96,7 +99,7 @@ function setBusy(busy) {
 }
 
 async function getJson(url) {
-    return weatherRequestCache.get(url);
+    return weatherRequestCache.get(url, undefined, 15000);
 }
 
 function showLocationChoices(locations) {
@@ -149,7 +152,7 @@ async function loadWeather(location, alreadyBusy = false, rememberLocation = tru
     try {
         const unit = temperatureUnit.value;
         const data = await getJson(utils.buildForecastUrl(location, unit));
-        renderWeather(location, data, unit);
+        renderWeather(location, utils.validateForecastData(data), unit);
         selectedLocation = location;
         weatherResults.hidden = false;
         if (rememberLocation) {
@@ -264,3 +267,14 @@ if (contactForm) {
 
 // Restore the last searched city automatically; device coordinates are never saved.
 if (savedLocation) loadWeather(savedLocation);
+
+const hero = document.getElementById("hero");
+if (hero && typeof window.matchMedia === "function" && window.matchMedia("(pointer: fine)").matches) {
+    hero.addEventListener("pointermove", (event) => {
+        const rect = hero.getBoundingClientRect();
+        const x = (event.clientX - rect.left) / rect.width - 0.5;
+        const y = (event.clientY - rect.top) / rect.height - 0.5;
+        hero.style.setProperty("--pointer-x", `${x * 10}px`);
+        hero.style.setProperty("--pointer-y", `${y * 10}px`);
+    });
+}

@@ -11,6 +11,7 @@ test("maps known and unknown weather codes to useful descriptions", () => {
 test("formats Celsius and Fahrenheit values", () => {
     assert.equal(weather.formatTemperature(18.6, "celsius"), "19°C");
     assert.equal(weather.formatTemperature(65.2, "fahrenheit"), "65°F");
+    assert.equal(weather.formatTemperature(NaN, "celsius"), "Unavailable");
 });
 
 test("forecast request uses the selected temperature and wind units", () => {
@@ -29,6 +30,11 @@ test("geocoding search encodes the city and requests multiple matches", () => {
     assert.equal(url.searchParams.get("count"), "10");
 });
 
+test("geocoding search trims city input and rejects an empty search", () => {
+    assert.equal(new URL(weather.buildGeocodingUrl("  Paris  ")).searchParams.get("name"), "Paris");
+    assert.throws(() => weather.buildGeocodingUrl("   "), /Enter a city name/);
+});
+
 test("normalizes multiple same-name city matches with identifying region details", () => {
     const locations = weather.normalizeLocations([
         { name: "Springfield", admin1: "Illinois", country: "United States", latitude: 39.8, longitude: -89.6 },
@@ -41,6 +47,46 @@ test("normalizes multiple same-name city matches with identifying region details
 
 test("normalization ignores incomplete geocoding results", () => {
     assert.deepEqual(weather.normalizeLocations([{ name: "Unknown", latitude: null, longitude: 1 }]), []);
+});
+
+test("normalization removes duplicates and out-of-range coordinates", () => {
+    const locations = weather.normalizeLocations([
+        { name: "Paris", latitude: 48.85, longitude: 2.35 },
+        { name: "Paris duplicate", latitude: 48.85, longitude: 2.35 },
+        { name: "Invalid", latitude: 91, longitude: 2.35 }
+    ]);
+    assert.equal(locations.length, 1);
+    assert.equal(locations[0].label, "Paris");
+});
+
+test("forecast URL rejects invalid locations", () => {
+    assert.throws(() => weather.buildForecastUrl({ latitude: 91, longitude: 0 }, "celsius"), /valid location/);
+});
+
+test("forecast data rejects incomplete service responses", () => {
+    assert.throws(
+        () => weather.validateForecastData({ current: {}, daily: {} }),
+        /incomplete forecast/
+    );
+});
+
+test("forecast data accepts complete current and daily values", () => {
+    const payload = {
+        current: {
+            temperature_2m: 18,
+            apparent_temperature: 17,
+            relative_humidity_2m: 62,
+            wind_speed_10m: 12,
+            weather_code: 2
+        },
+        daily: {
+            time: ["2026-11-18"],
+            weather_code: [2],
+            temperature_2m_max: [20],
+            temperature_2m_min: [14]
+        }
+    };
+    assert.equal(weather.validateForecastData(payload), payload);
 });
 
 test("requestJson returns parsed JSON for a successful response", async () => {
@@ -122,4 +168,18 @@ test("request cache removes failed requests so they can be retried", async () =>
     await assert.rejects(cache.get("https://example.test/weather"), /temporarily unavailable/);
     await assert.rejects(cache.get("https://example.test/weather"), /temporarily unavailable/);
     assert.equal(requests, 2);
+});
+
+test("requestJson times out stalled weather requests", async () => {
+    const fetchStub = async (_url, options) => new Promise((_resolve, reject) => {
+        options.signal.addEventListener("abort", () => {
+            const error = new Error("aborted");
+            error.name = "AbortError";
+            reject(error);
+        }, { once: true });
+    });
+    await assert.rejects(
+        weather.requestJson(fetchStub, "https://example.test", undefined, 5),
+        /request timed out/
+    );
 });
