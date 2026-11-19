@@ -13,6 +13,7 @@ const EMAILJS_URL = "https://cdn.jsdelivr.net/npm/@emailjs/browser@4.4.1/dist/em
 const EMAILJS_INTEGRITY = "sha384-SALc35EccAf6RzGw4iNsyj7kTPr33K7RoGzYu+7heZhT8s0GZouafRiCg1qy44AS";
 let emailJsLoadPromise = null;
 let emailJsInitialized = false;
+const weatherRequestCache = utils.createJsonCache(window.fetch.bind(window));
 
 function loadEmailJs() {
     if (window.emailjs) {
@@ -98,7 +99,7 @@ function setBusy(busy) {
 }
 
 async function getJson(url) {
-    return utils.requestJson(window.fetch.bind(window), url, undefined, 15000);
+    return weatherRequestCache.get(url);
 }
 
 function showLocationChoices(locations) {
