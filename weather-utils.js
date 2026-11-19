@@ -108,35 +108,59 @@
         return data;
     }
 
-    async function requestJson(fetchImpl, url, signal, timeoutMs = 15000) {
-        const controller = typeof AbortController === "function" ? new AbortController() : null;
-        let timedOut = false;
-        const timeout = Number.isFinite(timeoutMs) && timeoutMs > 0
-            ? setTimeout(() => {
-                timedOut = true;
-                controller?.abort();
-            }, timeoutMs)
-            : null;
-        const relayAbort = () => controller?.abort();
-        if (signal?.addEventListener) signal.addEventListener("abort", relayAbort, { once: true });
+    const responseCache = new Map();
+    const inFlightRequests = new Map();
 
-        try {
-            const response = await fetchImpl(url, { signal: controller?.signal || signal });
-            if (!response.ok) {
-                throw new Error("The weather service is temporarily unavailable. Please try again.");
-            }
-            return await response.json();
-        } catch (error) {
-            if (timedOut) {
-                throw new Error("The weather request timed out. Please try again.");
-            }
-            if (error?.name === "AbortError") throw new Error("The weather request was canceled.");
-            if (error instanceof SyntaxError) throw new Error("The weather service returned an invalid response.");
-            throw error;
-        } finally {
-            if (timeout) clearTimeout(timeout);
-            if (signal?.removeEventListener) signal.removeEventListener("abort", relayAbort);
+    async function requestJson(fetchImpl, url, signal, timeoutMs = 15000, cacheTtlMs = 300000) {
+        const now = Date.now();
+        const cacheKey = String(url);
+        const cacheable = /^https:\/\/(?:geocoding-api|api)\.open-meteo\.com\/v1\//.test(cacheKey);
+        const cached = cacheable ? responseCache.get(cacheKey) : null;
+        if (cached && cached.expiresAt > now) return cached.value;
+        if (cached) responseCache.delete(cacheKey);
+
+        if (cacheable && !signal?.aborted && inFlightRequests.has(cacheKey)) {
+            return inFlightRequests.get(cacheKey);
         }
+
+        const requestPromise = (async () => {
+            const controller = typeof AbortController === "function" ? new AbortController() : null;
+            let timedOut = false;
+            const timeout = Number.isFinite(timeoutMs) && timeoutMs > 0
+                ? setTimeout(() => {
+                    timedOut = true;
+                    controller?.abort();
+                }, timeoutMs)
+                : null;
+            const relayAbort = () => controller?.abort();
+            if (signal?.addEventListener) signal.addEventListener("abort", relayAbort, { once: true });
+
+            try {
+                const response = await fetchImpl(url, { signal: controller?.signal || signal });
+                if (!response.ok) {
+                    throw new Error("The weather service is temporarily unavailable. Please try again.");
+                }
+                const value = await response.json();
+                if (cacheable && !signal?.aborted && Number.isFinite(cacheTtlMs) && cacheTtlMs > 0) {
+                    responseCache.set(cacheKey, { value, expiresAt: Date.now() + cacheTtlMs });
+                }
+                return value;
+            } catch (error) {
+                if (timedOut) {
+                    throw new Error("The weather request timed out. Please try again.");
+                }
+                if (error?.name === "AbortError") throw new Error("The weather request was canceled.");
+                if (error instanceof SyntaxError) throw new Error("The weather service returned an invalid response.");
+                throw error;
+            } finally {
+                if (timeout) clearTimeout(timeout);
+                if (signal?.removeEventListener) signal.removeEventListener("abort", relayAbort);
+                if (cacheable) inFlightRequests.delete(cacheKey);
+            }
+        })();
+
+        if (cacheable && !signal?.aborted) inFlightRequests.set(cacheKey, requestPromise);
+        return requestPromise;
     }
 
     return { getConditions, formatTemperature, buildGeocodingUrl, normalizeLocations, buildForecastUrl, validateForecastData, requestJson };
