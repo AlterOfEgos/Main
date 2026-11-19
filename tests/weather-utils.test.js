@@ -108,6 +108,68 @@ test("requestJson propagates network errors", async () => {
     await assert.rejects(weather.requestJson(fetchStub, "https://example.test"), /offline/);
 });
 
+test("request cache reuses responses for repeated URLs", async () => {
+    let requests = 0;
+    const fetchStub = async () => {
+        requests += 1;
+        return { ok: true, json: async () => ({ requests }) };
+    };
+    const cache = weather.createRequestCache(fetchStub);
+
+    const first = await cache.get("https://example.test/weather");
+    const second = await cache.get("https://example.test/weather");
+
+    assert.deepEqual(second, first);
+    assert.equal(requests, 1);
+});
+
+test("request cache coalesces simultaneous requests", async () => {
+    let requests = 0;
+    const fetchStub = async () => {
+        requests += 1;
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        return { ok: true, json: async () => ({ requests }) };
+    };
+    const cache = weather.createRequestCache(fetchStub);
+
+    const [first, second] = await Promise.all([
+        cache.get("https://example.test/weather"),
+        cache.get("https://example.test/weather")
+    ]);
+
+    assert.deepEqual(first, second);
+    assert.equal(requests, 1);
+});
+
+test("request cache expires responses after the configured TTL", async () => {
+    let requests = 0;
+    let clock = 1000;
+    const fetchStub = async () => {
+        requests += 1;
+        return { ok: true, json: async () => ({ requests }) };
+    };
+    const cache = weather.createRequestCache(fetchStub, 100, () => clock);
+
+    await cache.get("https://example.test/weather");
+    clock += 101;
+    await cache.get("https://example.test/weather");
+
+    assert.equal(requests, 2);
+});
+
+test("request cache removes failed requests so they can be retried", async () => {
+    let requests = 0;
+    const fetchStub = async () => {
+        requests += 1;
+        return { ok: false, json: async () => ({}) };
+    };
+    const cache = weather.createRequestCache(fetchStub);
+
+    await assert.rejects(cache.get("https://example.test/weather"), /temporarily unavailable/);
+    await assert.rejects(cache.get("https://example.test/weather"), /temporarily unavailable/);
+    assert.equal(requests, 2);
+});
+
 test("requestJson times out stalled weather requests", async () => {
     const fetchStub = async (_url, options) => new Promise((_resolve, reject) => {
         options.signal.addEventListener("abort", () => {
