@@ -108,6 +108,41 @@ test("requestJson propagates network errors", async () => {
     await assert.rejects(weather.requestJson(fetchStub, "https://example.test"), /offline/);
 });
 
+test("requestJson caches successful responses for repeated weather lookups", async () => {
+    let requestCount = 0;
+    const fetchStub = async () => {
+        requestCount += 1;
+        return { ok: true, json: async () => ({ results: [] }) };
+    };
+    const url = "https://api.open-meteo.com/v1/forecast?latitude=1&longitude=2";
+
+    await weather.requestJson(fetchStub, url);
+    await weather.requestJson(fetchStub, url);
+
+    assert.equal(requestCount, 1);
+});
+
+test("requestJson coalesces concurrent requests for the same URL", async () => {
+    let requestCount = 0;
+    let resolveJson;
+    const fetchStub = async () => {
+        requestCount += 1;
+        return {
+            ok: true,
+            json: () => new Promise((resolve) => { resolveJson = resolve; })
+        };
+    };
+    const url = "https://api.open-meteo.com/v1/forecast?latitude=3&longitude=4";
+
+    const first = weather.requestJson(fetchStub, url);
+    const second = weather.requestJson(fetchStub, url);
+    await Promise.resolve();
+    resolveJson({ results: [] });
+
+    await Promise.all([first, second]);
+    assert.equal(requestCount, 1);
+});
+
 test("requestJson times out stalled weather requests", async () => {
     const fetchStub = async (_url, options) => new Promise((_resolve, reject) => {
         options.signal.addEventListener("abort", () => {
