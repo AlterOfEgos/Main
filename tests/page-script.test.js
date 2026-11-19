@@ -30,6 +30,7 @@ test("EmailJS is loaded on contact submission and initialized only once", async 
         fetch: async () => {},
         WeatherUtils: {
             requestJson() {},
+            createJsonCache() { return async () => ({}) },
             buildGeocodingUrl() {},
             normalizeLocations() {},
             buildForecastUrl() {}
