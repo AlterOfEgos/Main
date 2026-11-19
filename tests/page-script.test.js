@@ -87,3 +87,46 @@ test("hero image is prioritized and has stable intrinsic dimensions", () => {
     assert.match(html, /<link rel="preload" as="image" href="assets\/profile\.webp"[^>]*fetchpriority="high"/);
     assert.match(html, /<img src="assets\/profile\.webp"[^>]*width="768"[^>]*height="1365"[^>]*loading="eager"[^>]*fetchpriority="high"/);
 });
+
+test("hero pointer movement batches style updates to animation frames", async () => {
+    const elements = new Map();
+    let scheduledFrame = null;
+    const window = {
+        localStorage: { getItem() { return null; }, setItem() {} },
+        fetch: async () => {},
+        matchMedia() { return { matches: true }; },
+        requestAnimationFrame(callback) {
+            scheduledFrame = callback;
+            return 1;
+        },
+        WeatherUtils: {
+            createRequestCache() {
+                return { get: async () => ({}) };
+            }
+        }
+    };
+    const hero = createElement();
+    hero.style = { setProperty(name, value) { this[name] = value; } };
+    hero.getBoundingClientRect = () => ({ left: 0, top: 0, width: 100, height: 100 });
+    const document = {
+        getElementById(id) {
+            if (id === "hero") return hero;
+            if (!elements.has(id)) elements.set(id, createElement());
+            return elements.get(id);
+        },
+        createElement,
+        head: { append() {} }
+    };
+    const context = vm.createContext({ window, document, navigator: {} });
+    const source = fs.readFileSync(path.join(__dirname, "..", "AlterOfEgos_Webpage.script.js"), "utf8");
+
+    vm.runInContext(source, context);
+    const pointerMove = hero.listeners.get("pointermove");
+    pointerMove({ clientX: 20, clientY: 30 });
+    pointerMove({ clientX: 80, clientY: 70 });
+
+    assert.equal(typeof scheduledFrame, "function");
+    scheduledFrame();
+    assert.equal(hero.style["--pointer-x"], "3px");
+    assert.equal(hero.style["--pointer-y"], "2px");
+});

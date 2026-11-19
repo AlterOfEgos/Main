@@ -270,11 +270,20 @@ if (savedLocation) loadWeather(savedLocation);
 
 const hero = document.getElementById("hero");
 if (hero && typeof window.matchMedia === "function" && window.matchMedia("(pointer: fine)").matches) {
+    let pointerFrame = null;
+    let pointerX = 0;
+    let pointerY = 0;
+
     hero.addEventListener("pointermove", (event) => {
         const rect = hero.getBoundingClientRect();
-        const x = (event.clientX - rect.left) / rect.width - 0.5;
-        const y = (event.clientY - rect.top) / rect.height - 0.5;
-        hero.style.setProperty("--pointer-x", `${x * 10}px`);
-        hero.style.setProperty("--pointer-y", `${y * 10}px`);
+        pointerX = Math.round((((event.clientX - rect.left) / rect.width - 0.5) * 10) * 100) / 100;
+        pointerY = Math.round((((event.clientY - rect.top) / rect.height - 0.5) * 10) * 100) / 100;
+
+        if (pointerFrame !== null) return;
+        pointerFrame = window.requestAnimationFrame(() => {
+            hero.style.setProperty("--pointer-x", `${pointerX}px`);
+            hero.style.setProperty("--pointer-y", `${pointerY}px`);
+            pointerFrame = null;
+        });
     });
 }
