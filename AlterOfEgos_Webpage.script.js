@@ -270,11 +270,29 @@ if (savedLocation) loadWeather(savedLocation);
 
 const hero = document.getElementById("hero");
 if (hero && typeof window.matchMedia === "function" && window.matchMedia("(pointer: fine)").matches) {
+    let heroRect = null;
+    let pointerFrame = null;
+    let latestPointer = null;
+
+    const updateHeroRect = () => {
+        heroRect = hero.getBoundingClientRect();
+    };
+
+    hero.addEventListener("pointerenter", updateHeroRect);
     hero.addEventListener("pointermove", (event) => {
-        const rect = hero.getBoundingClientRect();
-        const x = (event.clientX - rect.left) / rect.width - 0.5;
-        const y = (event.clientY - rect.top) / rect.height - 0.5;
-        hero.style.setProperty("--pointer-x", `${x * 10}px`);
-        hero.style.setProperty("--pointer-y", `${y * 10}px`);
+        latestPointer = event;
+        if (pointerFrame !== null) return;
+
+        pointerFrame = window.requestAnimationFrame(() => {
+            pointerFrame = null;
+            if (!heroRect) updateHeroRect();
+            if (!heroRect.width || !heroRect.height) return;
+
+            const x = (latestPointer.clientX - heroRect.left) / heroRect.width - 0.5;
+            const y = (latestPointer.clientY - heroRect.top) / heroRect.height - 0.5;
+            hero.style.setProperty("--pointer-x", `${x * 10}px`);
+            hero.style.setProperty("--pointer-y", `${y * 10}px`);
+        });
     });
+    window.addEventListener("resize", updateHeroRect);
 }
