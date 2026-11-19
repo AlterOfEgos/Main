@@ -77,3 +77,10 @@ test("EmailJS is loaded on contact submission and initialized only once", async 
     assert.equal(scripts[0].crossOrigin, "anonymous");
     assert.equal(window.emailjs.initCount, 1);
 });
+
+test("hero image is prioritized and has stable intrinsic dimensions", () => {
+    const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+
+    assert.match(html, /<link rel="preload" as="image" href="assets\/profile\.webp"[^>]*fetchpriority="high"/);
+    assert.match(html, /<img src="assets\/profile\.webp"[^>]*width="768"[^>]*height="1365"[^>]*loading="eager"[^>]*fetchpriority="high"/);
+});
