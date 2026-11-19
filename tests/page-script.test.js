@@ -85,5 +85,5 @@ test("hero image is prioritized and has stable intrinsic dimensions", () => {
     const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
 
     assert.match(html, /<link rel="preload" as="image" href="assets\/profile\.webp"[^>]*fetchpriority="high"/);
-    assert.match(html, /<img src="assets\/profile\.webp"[^>]*width="768"[^>]*height="1365"[^>]*loading="eager"[^>]*fetchpriority="high"/);
+    assert.match(html, /<img src="assets\/profile\.webp"[^>]*width="420"[^>]*height="420"[^>]*loading="eager"[^>]*fetchpriority="high"/);
 });
