@@ -121,3 +121,48 @@ test("requestJson times out stalled weather requests", async () => {
         /request timed out/
     );
 });
+
+test("createJsonCache reuses successful responses and deduplicates in-flight requests", async () => {
+    let requestCount = 0;
+    const payload = { temperature: 18 };
+    const fetchStub = async () => {
+        requestCount += 1;
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        return { ok: true, json: async () => payload };
+    };
+    const getCachedJson = weather.createJsonCache(fetchStub, 60000);
+
+    const [first, second] = await Promise.all([
+        getCachedJson("https://example.test/weather"),
+        getCachedJson("https://example.test/weather")
+    ]);
+    const third = await getCachedJson("https://example.test/weather");
+
+    assert.strictEqual(first, payload);
+    assert.strictEqual(second, payload);
+    assert.strictEqual(third, payload);
+    assert.equal(requestCount, 1);
+});
+
+test("createJsonCache does not cache payloads rejected by a validator", async () => {
+    let requestCount = 0;
+    const fetchStub = async () => {
+        requestCount += 1;
+        return { ok: true, json: async () => ({ invalid: true }) };
+    };
+    const getCachedJson = weather.createJsonCache(fetchStub, 60000);
+    const rejectInvalid = (value) => {
+        if (!value.valid) throw new Error("invalid payload");
+    };
+
+    await assert.rejects(
+        getCachedJson("https://example.test/weather", undefined, 15000, rejectInvalid),
+        /invalid payload/
+    );
+    await assert.rejects(
+        getCachedJson("https://example.test/weather", undefined, 15000, rejectInvalid),
+        /invalid payload/
+    );
+
+    assert.equal(requestCount, 2);
+});
