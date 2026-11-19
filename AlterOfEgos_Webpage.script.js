@@ -13,6 +13,8 @@ const EMAILJS_URL = "https://cdn.jsdelivr.net/npm/@emailjs/browser@4.4.1/dist/em
 const EMAILJS_INTEGRITY = "sha384-SALc35EccAf6RzGw4iNsyj7kTPr33K7RoGzYu+7heZhT8s0GZouafRiCg1qy44AS";
 let emailJsLoadPromise = null;
 let emailJsInitialized = false;
+const geocodingCache = utils.createJsonCache();
+const forecastCache = utils.createJsonCache();
 
 function loadEmailJs() {
     if (window.emailjs) {
@@ -98,7 +100,15 @@ function setBusy(busy) {
 }
 
 async function getJson(url) {
-    return utils.requestJson(window.fetch.bind(window), url, undefined, 15000);
+    const cache = url.includes("geocoding-api.open-meteo.com")
+        ? geocodingCache
+        : forecastCache;
+    const cached = cache.get(url);
+    if (cached) return cached;
+
+    const data = await utils.requestJson(window.fetch.bind(window), url, undefined, 15000);
+    cache.set(url, data);
+    return data;
 }
 
 function showLocationChoices(locations) {

@@ -139,5 +139,28 @@
         }
     }
 
-    return { getConditions, formatTemperature, buildGeocodingUrl, normalizeLocations, buildForecastUrl, validateForecastData, requestJson };
+    function createJsonCache(ttlMs = 300000) {
+        const entries = new Map();
+
+        function get(key) {
+            const entry = entries.get(key);
+            if (!entry) return undefined;
+            if (Date.now() >= entry.expiresAt) {
+                entries.delete(key);
+                return undefined;
+            }
+            return entry.value;
+        }
+
+        function set(key, value) {
+            entries.set(key, {
+                value,
+                expiresAt: Date.now() + ttlMs
+            });
+        }
+
+        return { get, set };
+    }
+
+    return { getConditions, formatTemperature, buildGeocodingUrl, normalizeLocations, buildForecastUrl, validateForecastData, requestJson, createJsonCache };
 });

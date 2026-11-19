@@ -121,3 +121,13 @@ test("requestJson times out stalled weather requests", async () => {
         /request timed out/
     );
 });
+
+test("JSON cache returns values until expiration", () => {
+    const cache = weather.createJsonCache(10);
+    cache.set("forecast", { temperature: 18 });
+    assert.deepEqual(cache.get("forecast"), { temperature: 18 });
+
+    const futureCache = weather.createJsonCache(-1);
+    futureCache.set("forecast", { temperature: 18 });
+    assert.equal(futureCache.get("forecast"), undefined);
+});

@@ -32,7 +32,13 @@ test("EmailJS is loaded on contact submission and initialized only once", async 
             requestJson() {},
             buildGeocodingUrl() {},
             normalizeLocations() {},
-            buildForecastUrl() {}
+            buildForecastUrl() {},
+            createJsonCache() {
+                return {
+                    get() {},
+                    set() {}
+                };
+            }
         }
     };
     const document = {
