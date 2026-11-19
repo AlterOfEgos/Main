@@ -95,17 +95,32 @@ test("requestJson returns parsed JSON for a successful response", async () => {
     assert.deepEqual(await weather.requestJson(fetchStub, "https://example.test"), payload);
 });
 
+test("requestJson caches successful responses for repeated requests", async () => {
+    let fetchCount = 0;
+    const url = "https://example.test/cache-check";
+    const fetchStub = async () => {
+        fetchCount += 1;
+        return { ok: true, json: async () => ({ fetchCount }) };
+    };
+
+    const first = await weather.requestJson(fetchStub, url);
+    const second = await weather.requestJson(fetchStub, url);
+
+    assert.equal(fetchCount, 1);
+    assert.equal(second, first);
+});
+
 test("requestJson reports failed HTTP responses", async () => {
     const fetchStub = async () => ({ ok: false, json: async () => ({}) });
     await assert.rejects(
-        weather.requestJson(fetchStub, "https://example.test"),
+        weather.requestJson(fetchStub, "https://example.test/http-failure"),
         /weather service is temporarily unavailable/
     );
 });
 
 test("requestJson propagates network errors", async () => {
     const fetchStub = async () => { throw new Error("offline"); };
-    await assert.rejects(weather.requestJson(fetchStub, "https://example.test"), /offline/);
+    await assert.rejects(weather.requestJson(fetchStub, "https://example.test/network-failure"), /offline/);
 });
 
 test("requestJson times out stalled weather requests", async () => {
@@ -117,7 +132,7 @@ test("requestJson times out stalled weather requests", async () => {
         }, { once: true });
     });
     await assert.rejects(
-        weather.requestJson(fetchStub, "https://example.test", undefined, 5),
+        weather.requestJson(fetchStub, "https://example.test/timeout", undefined, 5),
         /request timed out/
     );
 });
