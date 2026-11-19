@@ -87,3 +87,58 @@ test("hero image is prioritized and has stable intrinsic dimensions", () => {
     assert.match(html, /<link rel="preload" as="image" href="assets\/profile\.webp"[^>]*fetchpriority="high"/);
     assert.match(html, /<img src="assets\/profile\.webp"[^>]*width="768"[^>]*height="1365"[^>]*loading="eager"[^>]*fetchpriority="high"/);
 });
+
+test("hero pointer effect caches geometry and coalesces frame updates", () => {
+    const source = fs.readFileSync(path.join(__dirname, "..", "AlterOfEgos_Webpage.script.js"), "utf8");
+    const heroListeners = new Map();
+    let queuedFrame = null;
+    let rectReads = 0;
+    let heroStyleWrites = 0;
+    const hero = {
+        listeners: heroListeners,
+        addEventListener(name, callback) { heroListeners.set(name, callback); },
+        getBoundingClientRect() {
+            rectReads += 1;
+            return { left: 10, top: 20, width: 100, height: 100 };
+        },
+        style: {
+            setProperty() { heroStyleWrites += 1; }
+        }
+    };
+    const elements = new Map([["hero", hero]]);
+    const document = {
+        getElementById(id) {
+            if (!elements.has(id)) elements.set(id, createElement());
+            return elements.get(id);
+        },
+        createElement() { return createElement(); },
+        head: { append() {} }
+    };
+    const windowListeners = new Map();
+    const window = {
+        localStorage: { getItem() { return null; }, setItem() {} },
+        fetch: async () => {},
+        matchMedia: () => ({ matches: true }),
+        requestAnimationFrame(callback) {
+            queuedFrame = callback;
+            return 1;
+        },
+        addEventListener(name, callback) { windowListeners.set(name, callback); },
+        WeatherUtils: {
+            createRequestCache() { return { get: async () => ({}) }; }
+        }
+    };
+    const context = vm.createContext({ window, document, navigator: {} });
+    vm.runInContext(source, context);
+
+    heroListeners.get("pointerenter")();
+    assert.equal(rectReads, 1);
+
+    heroListeners.get("pointermove")({ clientX: 35, clientY: 45 });
+    heroListeners.get("pointermove")({ clientX: 60, clientY: 70 });
+    assert.equal(queuedFrame !== null, true);
+    queuedFrame();
+
+    assert.equal(rectReads, 1);
+    assert.equal(heroStyleWrites, 2);
+});
