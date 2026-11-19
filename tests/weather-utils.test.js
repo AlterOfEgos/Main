@@ -121,3 +121,43 @@ test("requestJson times out stalled weather requests", async () => {
         /request timed out/
     );
 });
+
+test("JSON cache reuses successful requests and deduplicates concurrent requests", async () => {
+    let fetchCount = 0;
+    const payload = { temperature: 18 };
+    const fetchStub = async () => {
+        fetchCount += 1;
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        return { ok: true, json: async () => payload };
+    };
+    const cache = weather.createJsonCache(fetchStub, 1000);
+
+    const [first, second] = await Promise.all([
+        cache.get("https://example.test/weather"),
+        cache.get("https://example.test/weather")
+    ]);
+
+    assert.equal(first, payload);
+    assert.equal(second, payload);
+    assert.equal(fetchCount, 1);
+    assert.equal(await cache.get("https://example.test/weather"), payload);
+    assert.equal(fetchCount, 1);
+});
+
+test("JSON cache expires and removes failed requests", async () => {
+    let fetchCount = 0;
+    const fetchStub = async () => {
+        fetchCount += 1;
+        if (fetchCount === 1) return { ok: false, json: async () => ({}) };
+        return { ok: true, json: async () => ({ temperature: 20 }) };
+    };
+    const cache = weather.createJsonCache(fetchStub, 5);
+
+    await assert.rejects(cache.get("https://example.test/weather"));
+    await cache.get("https://example.test/weather");
+    assert.equal(fetchCount, 2);
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    await cache.get("https://example.test/weather");
+    assert.equal(fetchCount, 3);
+});
