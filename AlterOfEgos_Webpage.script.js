@@ -278,3 +278,97 @@ if (hero && typeof window.matchMedia === "function" && window.matchMedia("(point
         hero.style.setProperty("--pointer-y", `${y * 10}px`);
     });
 }
+
+// Personalization and navigation enhancements
+const themeToggle = document.getElementById("theme-toggle");
+const savedTheme = typeof window.localStorage !== "undefined"
+    ? window.localStorage.getItem("alterofegos-theme")
+    : null;
+function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    const isLight = theme === "light";
+    themeToggle?.setAttribute("aria-pressed", String(isLight));
+    themeToggle?.setAttribute("aria-label", isLight ? "Switch to dark theme" : "Switch to light theme");
+}
+applyTheme(savedTheme === "light" ? "light" : "dark");
+themeToggle?.addEventListener("click", () => {
+    const nextTheme = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+    applyTheme(nextTheme);
+    try { window.localStorage.setItem("alterofegos-theme", nextTheme); } catch (error) {}
+});
+
+const heroTime = document.getElementById("hero-time");
+const heroGreeting = document.getElementById("hero-greeting");
+function updateLocalTime() {
+    const now = new Date();
+    if (heroTime) {
+        heroTime.dateTime = now.toISOString();
+        heroTime.textContent = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    }
+    const hour = now.getHours();
+    if (heroGreeting) heroGreeting.textContent = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+}
+updateLocalTime();
+setInterval(updateLocalTime, 60000);
+
+document.querySelectorAll("[data-city]").forEach((button) => {
+    button.addEventListener("click", () => {
+        cityInput.value = button.dataset.city;
+        cityInput.focus();
+        searchCity(button.dataset.city);
+    });
+});
+
+const copyWeatherButton = document.getElementById("copy-weather");
+copyWeatherButton?.addEventListener("click", async () => {
+    const city = document.getElementById("current-city")?.textContent;
+    const temperature = document.getElementById("current-temperature")?.textContent;
+    const description = document.getElementById("current-description")?.textContent;
+    const text = [city, temperature, description].filter(Boolean).join(" - ");
+    if (!text || !navigator.clipboard) return;
+    await navigator.clipboard.writeText(text);
+    copyWeatherButton.textContent = "Copied";
+    setTimeout(() => { copyWeatherButton.textContent = "Copy forecast"; }, 1600);
+});
+
+const messageInput = document.getElementById("message");
+const messageCount = document.getElementById("message-count");
+messageInput?.addEventListener("input", () => {
+    if (messageCount) messageCount.textContent = String(messageInput.value.length);
+});
+
+const backToTop = document.getElementById("back-to-top");
+window.addEventListener("scroll", () => {
+    if (backToTop) backToTop.hidden = window.scrollY < 500;
+}, { passive: true });
+backToTop?.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+
+const footerYear = document.getElementById("footer-year");
+if (footerYear) footerYear.textContent = String(new Date().getFullYear());
+
+const revealTargets = document.querySelectorAll(".reveal-on-scroll");
+if ("IntersectionObserver" in window) {
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add("visible");
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.12 });
+    revealTargets.forEach((target) => observer.observe(target));
+} else {
+    revealTargets.forEach((target) => target.classList.add("visible"));
+}
+
+const navLinks = [...document.querySelectorAll(".nav-links a")];
+const observedSections = navLinks.map((link) => document.querySelector(link.getAttribute("href"))).filter(Boolean);
+if ("IntersectionObserver" in window) {
+    const navObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            navLinks.forEach((link) => link.classList.toggle("active", link.getAttribute("href") === `#${entry.target.id}`));
+        });
+    }, { rootMargin: "-35% 0px -55%", threshold: 0 });
+    observedSections.forEach((section) => navObserver.observe(section));
+}

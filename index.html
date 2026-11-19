@@ -12,6 +12,16 @@
     <script defer src="AlterOfEgos_Webpage.script.js"></script>
 </head>
 <body>
+    <nav class="site-nav" aria-label="Page navigation">
+        <a class="brand-mark" href="#hero" aria-label="AlterOfEgos home">AOE</a>
+        <div class="nav-links">
+            <a href="#weather">Weather</a>
+            <a href="#contact">Contact</a>
+        </div>
+        <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Switch to light theme" aria-pressed="false">
+            <span aria-hidden="true">◐</span>
+        </button>
+    </nav>
     <header id="hero">
         <div class="hero-grid" aria-hidden="true"></div>
         <div class="orb orb-one" aria-hidden="true"></div>
@@ -26,6 +36,7 @@
                 <p class="hero-kicker"><span></span> Digital identity / live</p>
                 <h1>AlterOfEgos</h1>
                 <p class="hero-tagline">Explorer of worlds, weather &amp; late-night ideas.</p>
+                <p class="hero-meta"><time id="hero-time"></time><span aria-hidden="true">/</span><span id="hero-greeting">Welcome</span></p>
                 <div class="hero-actions">
                     <a href="#weather" class="primary-action">Explore forecast <span aria-hidden="true">↘</span></a>
                     <a href="#contact" class="text-action">Get in touch <span aria-hidden="true">→</span></a>
@@ -52,7 +63,7 @@
             </a>
         </nav>
 
-        <section id="weather" aria-labelledby="weather-heading">
+        <section id="weather" class="reveal-on-scroll" aria-labelledby="weather-heading">
             <div class="weather-heading-row">
                 <div>
                     <p class="eyebrow">LOCAL FORECAST</p>
@@ -73,6 +84,12 @@
                 <button type="submit">Search</button>
                 <button type="button" id="use-location" class="secondary-button">Use my location</button>
             </form>
+            <div class="quick-locations" aria-label="Popular locations">
+                <span>Quick picks</span>
+                <button type="button" data-city="Tokyo">Tokyo</button>
+                <button type="button" data-city="London">London</button>
+                <button type="button" data-city="New York">New York</button>
+            </div>
 
             <div id="location-choices" class="location-choices" role="group" aria-label="Matching locations" hidden></div>
             <p id="weather-status" class="weather-status" role="status" aria-live="polite" aria-atomic="true">Search for a city or use your location to see the forecast.</p>
@@ -93,6 +110,7 @@
                         <div><dt>Humidity</dt><dd id="humidity"></dd></div>
                         <div><dt>Wind</dt><dd id="wind-speed"></dd></div>
                     </dl>
+                    <button type="button" id="copy-weather" class="copy-weather">Copy forecast</button>
                 </article>
 
                 <div class="forecast-heading"><h3>5-day forecast</h3></div>
@@ -101,19 +119,20 @@
             </div>
         </section>
 
-        <section id="contact" aria-labelledby="contact-heading">
+        <section id="contact" class="reveal-on-scroll" aria-labelledby="contact-heading">
             <h2 id="contact-heading">Connect with Me</h2>
             <form id="contact-form">
                 <label for="email">Your email address</label>
                 <input type="email" id="email" name="email" autocomplete="email" required>
                 <label for="message">Message</label>
-                <textarea id="message" name="message" rows="5" required></textarea>
+                <textarea id="message" name="message" rows="5" maxlength="500" required></textarea>
+                <p class="message-count"><span id="message-count">0</span>/500</p>
                 <button type="submit">Send message</button>
                 <p id="form-status" role="status" aria-live="polite" aria-atomic="true"></p>
             </form>
         </section>
 
-        <section id="profile" aria-labelledby="profile-heading">
+        <section id="profile" class="reveal-on-scroll" aria-labelledby="profile-heading">
             <h2 id="profile-heading">About Me</h2>
             <p>I’m AlterOfEgos. You can find me on Snapchat and Steam, or use the contact form to get in touch.</p>
         </section>
@@ -121,6 +140,8 @@
 
     <footer>
         <blockquote>“Your pain is the breaking of the shell that encloses your understanding.”</blockquote>
+        <p>&copy; <span id="footer-year"></span> AlterOfEgos</p>
     </footer>
+    <button type="button" id="back-to-top" class="back-to-top" aria-label="Back to top" hidden>↑</button>
 </body>
 </html>
