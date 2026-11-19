@@ -6,6 +6,7 @@
     <meta name="description" content="Personal page and local weather dashboard for AlterOfEgos.">
     <meta name="theme-color" content="#20212a">
     <title>AlterOfEgos | Personal Page</title>
+    <link rel="preload" as="image" href="assets/profile.webp" type="image/webp" fetchpriority="high">
     <link rel="stylesheet" href="AlterOfEgos_Webpage_styles.css">
     <script defer src="weather-utils.js"></script>
     <script defer src="AlterOfEgos_Webpage.script.js"></script>
@@ -18,7 +19,7 @@
         <div class="hero-content">
             <div class="portrait-shell">
                 <div class="portrait-ring" aria-hidden="true"></div>
-                <img src="assets/profile.webp" alt="Profile photo of AlterOfEgos" id="headshot" decoding="async">
+                <img src="assets/profile.webp" alt="Profile photo of AlterOfEgos" id="headshot" width="768" height="1365" loading="eager" fetchpriority="high" decoding="async">
                 <span class="online-pulse" aria-label="Online"></span>
             </div>
             <div class="hero-copy">
